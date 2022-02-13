@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 
+// 순수 Jdbc로 db접근
 public class JdbcMemberRepository implements MemberRepository {
     private final DataSource dataSource;
 

@@ -19,6 +19,7 @@ public class MemberController {
 @Autowired // memberController가 생성될 때 memberService가 주입된 (Dependency Injection). 생성자 주입
 public MemberController(MemberService memberService) {
     this.memberService = memberService;
+    System.out.println("memberService = " + memberService.getClass());
     // memberService.setMemberRepository() : Setter로 DI 주입 시 해당 객체를 아무 개발자를 호출할 수 있음
 }
 
