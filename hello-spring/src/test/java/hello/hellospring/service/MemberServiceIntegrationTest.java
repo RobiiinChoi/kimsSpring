@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @Transactional // test에서 트랜잭션 어노테이션이 붙었을 때만 롤백함. 다른 곳에서는 정상적으로 트랜잭션 진행
 public class MemberServiceIntegrationTest {
 
-    @Autowired MemberService service;
+    @Autowired MemberService service; // 필드 주입 : 실제적으로 많이 사용하지 않는다
     @Autowired
     MemberRepository memberRepository;
 
