@@ -6,6 +6,8 @@ import lombok.Setter;
 import javax.persistence.Embeddable;
 import javax.persistence.Entity;
 
+
+// JPA 엔티티 안 컬럼을 하나의 객체로써 사용하고 싶다면 이 어노테이션을 사용함
 @Embeddable
 @Getter
 public class Address {

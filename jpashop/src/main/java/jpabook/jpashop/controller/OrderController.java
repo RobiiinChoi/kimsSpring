@@ -42,6 +42,7 @@ public class OrderController {
         return "redirect:/orders";
     }
 
+    // 주문 내역 화면에서는 회원당 주문 내역을 하나만 출력했으므로 하나만 노출된다.
     @GetMapping("/orders")
     public String orderList(@ModelAttribute("orderSearch")OrderSearch orderSearch, Model model){
         List<Order> orders = orderService.findOrders(orderSearch);

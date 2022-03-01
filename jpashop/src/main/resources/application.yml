@@ -17,3 +17,11 @@ logging:
   level:
     org.hibernate.SQL: debug
     org.hibernate.type: trace
+
+  jpa:
+      properties:
+        hibernate:
+          default_batch_fetch_size: 1000
+
+          // 개별로 설정하려면 @BatchSize 를 적용하면 된다. (컬렉션은 컬렉션 필드에, 엔티티는 엔티티 클래스에 적용)
+          // 한번에 인쿼리로 다가지고옴
