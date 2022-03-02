@@ -73,7 +73,7 @@ public class OrderQueryRepository {
                         " where oi.order.id in :orderIds", OrderItemQueryDto.class)
                 .setParameter("orderIds", orderIds)
                 .getResultList();
- 
+
         // 메모리에 쿼리 결과를 다 가지고와서 메모리에서 매칭해서 값을 뽑아준다
         Map<Long, List<OrderItemQueryDto>> orderItemMap = orderItems.stream()
                 .collect(Collectors.groupingBy(orderItemQueryDto -> orderItemQueryDto.getOrderId()));
