@@ -8,6 +8,11 @@ import javax.persistence.*;
 @Getter @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @ToString(of = {"id", "username", "age"})
+@NamedQuery(
+    name="Member.findByUsername",
+        query="select m from Member m where m.username = :username"
+)
+// namedQuery의 장점 : 파싱시 오류가 있으면 오류 내역을 알려줌
 public class Member {
 
     @Id @GeneratedValue
@@ -24,6 +29,11 @@ public class Member {
 
     public Member(String username) {
         this.username = username;
+    }
+
+    public Member(String username, int age) {
+        this.username = username;
+        this.age = age;
     }
 
     public Member(String username, int age, Team team) {
