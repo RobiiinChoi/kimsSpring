@@ -1,5 +1,6 @@
 package com.study.querydsl.entity;
 
+import com.querydsl.core.QueryResults;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.assertj.core.api.Assertions;
@@ -115,5 +116,54 @@ public class QuerydslBasicTest {
 
         assertThat(findMember.getUsername()).isEqualTo("member1");
         assertThat(findMember.getAge()).isEqualTo(10);
+    }
+
+    @Test
+    public void resultFetch(){
+
+        // List
+        List<Member> fetch = queryFactory
+                .selectFrom(member)
+                .fetch();
+
+        // count
+        long total = fetch.size();
+
+        // single
+        Member fetchOne = queryFactory.selectFrom(member)
+                .where(member.username.eq("member1"))
+                .fetchOne();
+
+        // single first
+        Member fetchFirst = queryFactory
+                .selectFrom(member)
+                .fetchFirst(); // limit(1).fetch() 와 동일
+        /*
+        * ** 중요
+        * fetchResults(), fetchCount() 는 Deprecated됨 => 다중 쿼리 그룹에서 완벽하게 지원되지 않아서.
+        * 사용 시
+        * 1) fetchCount() > fetch().size() 로 변경
+        * 2) fetchResults() > offset() / limit()를 fetch()전 항목을 걸어두고 fetch() 진행
+        *
+        * ex) List<User> content = queryFactory
+			.selectFrom(user)
+			.where(user.username.like("user_"))
+			.offset(pageable.getOffset()) // offset
+			.limit(pageable.getPageSize()) // limit
+			.fetch();
+        *
+        * */
+
+//        QueryResults<Member> results = queryFactory
+//                .selectFrom(member)
+//                .fetchResults(); fetchResults는 decprecated 되었음 (fetch 대신 사용할 것)
+//
+//        results.getTotal();
+//        List<Member> content = results.getResults();
+//        results.getLimit(); 페이징 처리 할 수 있는 메서드를 가져다 줌
+//        results.getOffset();
+
+
+
     }
 }
