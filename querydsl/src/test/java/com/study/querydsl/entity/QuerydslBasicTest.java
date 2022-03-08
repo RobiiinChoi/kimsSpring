@@ -89,4 +89,31 @@ public class QuerydslBasicTest {
 
         Assertions.assertThat(findMember.getUsername()).isEqualTo("member1");
     }
+
+    @Test
+    public void search(){
+        Member findMember = queryFactory
+                .selectFrom(member)
+                .where(member.username.eq("member1")
+                        .or(member.age.eq(10))) // and : 조건추가
+                .fetchOne();
+
+        assertThat(findMember.getUsername()).isEqualTo("member1");
+        assertThat(findMember.getAge()).isEqualTo(10);
+    }
+
+    @Test
+    public void searchAndParam(){
+        Member findMember = queryFactory
+                .selectFrom(member)
+                .where(
+                        member.username.eq("member1"),
+                        member.age.eq(10)
+                ) // and 대신 , 로 분리해서 표현할 수도 있다.
+                // 후자의 경우 null값이 중간에 들어가더라도 무시하기 때문에 동적쿼리 생성시 코드가 깔끔해짐
+                .fetchOne();
+
+        assertThat(findMember.getUsername()).isEqualTo("member1");
+        assertThat(findMember.getAge()).isEqualTo(10);
+    }
 }
