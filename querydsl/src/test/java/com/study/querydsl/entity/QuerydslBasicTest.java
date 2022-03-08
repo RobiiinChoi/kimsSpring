@@ -162,8 +162,33 @@ public class QuerydslBasicTest {
 //        List<Member> content = results.getResults();
 //        results.getLimit(); 페이징 처리 할 수 있는 메서드를 가져다 줌
 //        results.getOffset();
-
-
-
     }
+
+    /*
+    * 회원 정렬 순서
+    * 1) 회원 나이 내림차순 desc
+    * 2) 회원 이름 올림차순 asc
+    * 단, 2에서 회원 이름이 없으면 마지막에 출력 nulls last
+    * */
+    @Test
+    public void sort(){
+
+        em.persist(new Member(null, 100));
+        em.persist(new Member("member5", 100));
+        em.persist(new Member("member6", 100));
+
+        List<Member> fetch = queryFactory
+                .selectFrom(QMember.member)
+                .where(QMember.member.age.eq(100))
+                .orderBy(QMember.member.age.desc(), QMember.member.username.asc().nullsLast()) // nullsFirst()도 있음
+                .fetch();
+
+        Member member5 = fetch.get(0);
+        Member member6 = fetch.get(1);
+        Member memberNull = fetch.get(2);
+        assertThat(member5.getUsername()).isEqualTo("member5");
+        assertThat(member6.getUsername()).isEqualTo("member6");
+        assertThat(memberNull.getUsername()).isEqualTo(null); // isNull()이랑 같음
+    }
+
 }
