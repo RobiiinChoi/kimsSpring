@@ -92,7 +92,7 @@ public class QuerydslBasicTest {
     }
 
     @Test
-    public void search(){
+    public void search() {
         Member findMember = queryFactory
                 .selectFrom(member)
                 .where(member.username.eq("member1")
@@ -104,7 +104,7 @@ public class QuerydslBasicTest {
     }
 
     @Test
-    public void searchAndParam(){
+    public void searchAndParam() {
         Member findMember = queryFactory
                 .selectFrom(member)
                 .where(
@@ -119,14 +119,13 @@ public class QuerydslBasicTest {
     }
 
     @Test
-    public void resultFetch(){
+    public void resultFetch() {
 
         // List
         List<Member> fetch = queryFactory
                 .selectFrom(member)
                 .fetch();
 
-        // count
         long total = fetch.size();
 
         // single
@@ -142,7 +141,9 @@ public class QuerydslBasicTest {
         * ** 중요
         * fetchResults(), fetchCount() 는 Deprecated됨 => 다중 쿼리 그룹에서 완벽하게 지원되지 않아서.
         * 사용 시
-        * 1) fetchCount() > fetch().size() 로 변경
+        * 1) fetchCount() > fetch().size() 로 변경. 하지만 단순히 리스트의 사이즈만 가져오기 때문에
+        * totalcount는 따로 count query를 날려서 가지고 오는게 나을듯..
+        *
         * 2) fetchResults() > offset() / limit()를 fetch()전 항목을 걸어두고 fetch() 진행
         *
         * ex) List<User> content = queryFactory
@@ -165,13 +166,13 @@ public class QuerydslBasicTest {
     }
 
     /*
-    * 회원 정렬 순서
-    * 1) 회원 나이 내림차순 desc
-    * 2) 회원 이름 올림차순 asc
-    * 단, 2에서 회원 이름이 없으면 마지막에 출력 nulls last
-    * */
+     * 회원 정렬 순서
+     * 1) 회원 나이 내림차순 desc
+     * 2) 회원 이름 올림차순 asc
+     * 단, 2에서 회원 이름이 없으면 마지막에 출력 nulls last
+     * */
     @Test
-    public void sort(){
+    public void sort() {
 
         em.persist(new Member(null, 100));
         em.persist(new Member("member5", 100));
@@ -191,4 +192,37 @@ public class QuerydslBasicTest {
         assertThat(memberNull.getUsername()).isEqualTo(null); // isNull()이랑 같음
     }
 
+    @Test
+    public void paging1() {
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .orderBy(member.username.desc())
+                .offset(1)
+                .limit(2)
+                .fetch();
+
+        assertThat(result.size()).isEqualTo(2);
+    }
+
+    @Test
+    public void paging2() {
+        List<Member> queryResult = queryFactory
+                .selectFrom(member)
+                .orderBy(member.username.desc())
+                .offset(0)
+                .limit(4)
+                .fetch();
+
+        // long result = (long) queryResult.size();
+
+        // 별도로 count query를 날려준다
+        long totalCount = queryFactory
+                .select(member.count())
+                .from(member)
+                .fetchOne();
+
+        // 하지만 size()랑 count랑 다른 경우 있으니 주의!!!!!!
+
+        assertThat(queryResult.size()).isEqualTo(totalCount);
+    }
 }
