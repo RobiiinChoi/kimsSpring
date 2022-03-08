@@ -2,6 +2,9 @@ package com.study.querydsl.entity;
 
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.dsl.CaseBuilder;
+import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.assertj.core.api.Assertions;
@@ -374,7 +377,7 @@ public class QuerydslBasicTest {
 
     }
 
-    // fetchJoin은 뒤에 fetchJoin()으로 진행
+    // fetchJoin은 뒤에 fetchJoin()으로 진행.
     @Test
     public void fitchJoin(){
         em.flush();
@@ -383,11 +386,154 @@ public class QuerydslBasicTest {
         Member findMember = queryFactory
                 .selectFrom(member)
                 .join(member.team, team).fetchJoin()
-                .where(member.username.eq("member1")) // fetch lazy이기 때문에 team은 조회 안됨.
+                .where(member.username.eq("member1")) // fetch lazy이기 때문에 fetchJoin()으로 가져와야됨.
                 .fetchOne();
 
         boolean loaded = emf.getPersistenceUnitUtil().isLoaded(findMember.getTeam());
         assertThat(loaded).as("페치 조인").isTrue();
+    }
 
+    // 가장 나이가 많은 회원 조회
+    // sub query의 경우 실제 성능 상으로도 더 느리니 서브쿼리가 필요할 시
+    // 1) join으로 해결할 수 없는지
+    // 2) app에서 처리할 수 없는지
+    // 3) 쿼리를 나눌 수 없는지
+    // 확인 필요
+    @Test
+    public void subQuery(){
+
+        // 바깥의 멤버 쿼리와 겹치면 안되기 때문에 (sub query) 
+        QMember memberSub = new QMember("memberSub");
+
+        List<Member> fetch = queryFactory
+                .selectFrom(member)
+                .where(member.age.eq(
+                        JPAExpressions
+                                .select(memberSub.age.max())
+                                .from(memberSub)
+                ))
+                .fetch();
+
+        assertThat(fetch).extracting("age").containsExactly(40);
+    }
+
+    //QueryDSL은 결국 JPQL로 실행되기 때문에, JPQL의 제약에 묶이게 됩니다.
+    //현재 하이버네이트 구현체는 FROM이나 JOIN 절에서 서브쿼리를 만들 수 없습니다.(SELECT, WHERE 절은 가능합니다.)
+    // 1) 쿼리를 2번 나누어 실행 (2번 안에 결과가 나올 경우) > db는 데이터를 퍼오는 용도 / 나머지는 app, presentation에서만 사용
+    // 2) 네이티브 쿼리 사용 > 통계성 쿼리같이 복잡한 경우 JPQL보다 네이티브가 나을 수가 있음
+    // 3) 서브 쿼리를 join으로 변경(가능한 상황도 있고, 불가능한 상황도 있음)
+
+    // 나이가 평균 이상인 회원
+    @Test
+    public void subQueryGoe(){
+
+        // 바깥의 멤버 쿼리와 겹치면 안되기 때문에 (sub query)
+        QMember memberSub = new QMember("memberSub");
+
+        List<Member> fetch = queryFactory
+                .selectFrom(member)
+                .where(member.age.goe(
+                        JPAExpressions
+                                .select(memberSub.age.avg())
+                                .from(memberSub)
+                ))
+                .fetch();
+
+        assertThat(fetch).extracting("age").containsExactly(30, 40);
+    }
+
+    // 10살 이상인 서브쿼리
+    @Test
+    public void subQueryIn(){
+
+        QMember memberSub = new QMember("memberSub");
+
+        List<Member> fetch = queryFactory
+                .selectFrom(member)
+                .where(member.age.in(
+                        JPAExpressions
+                                .select(memberSub.age)
+                                .from(memberSub)
+                                .where(memberSub.age.gt(10))
+                ))
+                .fetch();
+
+        assertThat(fetch).extracting("age").containsExactly(20, 30, 40);
+    }
+
+    @Test
+    public void selectSubquery(){
+        QMember memberSub = new QMember("memberSub");
+        List<Tuple> result = queryFactory
+                .select(member.username,
+                        JPAExpressions
+                                .select(memberSub.age.avg())
+                                .from(memberSub))
+                .from(member)
+                .fetch();
+        for (Tuple tuple : result) {
+            System.out.println("tuple = "+ tuple);
+        }
+    }
+    // case문을 꼭 db에서 처리해야 하는 경우도 있겠지만!
+    // > db에서 필터링만 해주고, 이런 경우 app에서 로직처리 해주는게 더 좋다!
+    // case문
+    @Test
+    public void basicCase(){
+        List<String> fetch = queryFactory
+                .select(member.age
+                        .when(10).then("열살")
+                        .when(20).then("스무살")
+                        .otherwise("기타"))
+                .from(member)
+                .fetch();
+
+        for (String s : fetch) {
+            System.out.println("s = " +s);
+        }
+    }
+
+    // complex case 문
+    @Test
+    public void complexCase(){
+        List<String> result = queryFactory
+                .select(new CaseBuilder()
+                        .when(member.age.between(0, 20)).then("0~20살") // when 안에 조건을 더 걸어주는 느낌
+                        .when(member.age.between(21, 30)).then("21~30살")
+                        .otherwise("기타"))
+                .from(member)
+                .fetch();
+        for (String s : result) {
+            System.out.println("s = " + s);
+        }
+    }
+
+    // 상수 더하기
+    @Test
+    public void constant(){
+        List<Tuple> result = queryFactory
+                .select(member.username, Expressions.constant("A"))
+                .from(member)
+                .fetch();
+        for (Tuple tuple : result) {
+            System.out.println("tuple = " + tuple);
+        }
+    }
+
+    // 문자 더하기
+    @Test
+    public void concat(){
+        List<String> result = queryFactory
+                // username_age
+                // 숫자 다 못가져오는 원인 > cast(member0_.age as char)
+                // 20 아니고 2만 나오는데, char 타입 기본길이가 1로 고정되어서 2로 반환 (앞자리만)
+                .select(member.username.concat("_").concat(member.age.stringValue()))
+                .from(member)
+                .where(member.username.eq("member2"))
+                .fetch();
+
+        for (String s : result) {
+            System.out.println("s = " + s);
+        }
     }
 }
