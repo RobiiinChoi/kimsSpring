@@ -12,6 +12,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.PersistenceUnit;
 import java.util.List;
 
 import static com.study.querydsl.entity.QMember.*;
@@ -181,9 +183,9 @@ public class QuerydslBasicTest {
         em.persist(new Member("member6", 100));
 
         List<Member> fetch = queryFactory
-                .selectFrom(QMember.member)
-                .where(QMember.member.age.eq(100))
-                .orderBy(QMember.member.age.desc(), QMember.member.username.asc().nullsLast()) // nullsFirst()도 있음
+                .selectFrom(member)
+                .where(member.age.eq(100))
+                .orderBy(member.age.desc(), member.username.asc().nullsLast()) // nullsFirst()도 있음
                 .fetch();
 
         Member member5 = fetch.get(0);
@@ -288,7 +290,7 @@ public class QuerydslBasicTest {
     }
 
     /*
-    * 세타 조인 (연관관계가 없는 필드로 조인) 
+    * 세타 조인 (연관관계가 없는 필드로 조인)
     * 회원의 이름이 팀 이름과 같은 회원 조인
     *
     * 모든 회원 & 모든 팀을 다 조인 시킨 후에 where 실행
@@ -309,5 +311,83 @@ public class QuerydslBasicTest {
         assertThat(fetch)
                 .extracting("username")
                 .containsExactly("teamA", "teamB");
+    }
+    /*
+        회원과 팀을 조인, 팀 이름이 teamA인 팀만 조인, 회원은 모두 조회
+        JPQL : select m, t from Member m left join m.team on t.name = 'teamA'
+
+        ** on절을 활용한 조인 대상을 필터링할 때,
+        외부조인이 아니라 ****내부조인(inner join) 사용 시,
+        where 절에서 필터링 하는것 과 동일한 기능을 가지고옴.
+        따라서 내부조인이면 where, 외부조인이 필요한 경우에만 이기능을 사용하면 좋다.
+     */
+    @Test
+    public void join_on_filtering(){
+        List<Tuple> result = queryFactory
+                .select(member, team)
+                .from(member)
+                .leftJoin(member.team, team)
+                .on(team.name.eq("teamA"))
+                .fetch();
+
+        for (Tuple tuple : result) {
+            System.out.println("tuple = " + tuple);
+        }
+    }
+
+    // 연관관계 없는 엔티티 외부 조인
+    // 회원의 이름이 팀 이름과 같은 대상 외부 조인
+    @Test
+    public void join_on_no_relation(){
+        em.persist(new Member("teamA"));
+        em.persist(new Member("teamB"));
+        em.persist(new Member("teamC"));
+
+        List<Tuple> fetch = queryFactory
+                .select(member, team)
+                .from(member)
+                .leftJoin(team).on(member.username.eq(team.name)) // .leftJoin(member.team, team) 이라고 하지 않 > on으로만 조인
+                .fetch();
+
+        for(Tuple tuple : fetch){
+            System.out.println("tuple = " + tuple);
+        }
+    }
+
+
+    @PersistenceUnit
+    EntityManagerFactory emf;
+
+    // fetch Join은 sql에서 제공하는 기능은 아니고, 연관된 엔티티를 sql 한번에 조회하는 기능 : 성능최적화
+    @Test
+    public void fitchJoinNo(){
+        em.flush();
+        em.clear();
+
+        Member findMember = queryFactory
+                .selectFrom(member)
+                .where(member.username.eq("member1")) // fetch lazy이기 때문에 team은 조회 안됨.
+                .fetchOne();
+
+        boolean loaded = emf.getPersistenceUnitUtil().isLoaded(findMember.getTeam());
+        assertThat(loaded).as("페치 조인 미적용").isFalse();
+
+    }
+
+    // fetchJoin은 뒤에 fetchJoin()으로 진행
+    @Test
+    public void fitchJoin(){
+        em.flush();
+        em.clear();
+
+        Member findMember = queryFactory
+                .selectFrom(member)
+                .join(member.team, team).fetchJoin()
+                .where(member.username.eq("member1")) // fetch lazy이기 때문에 team은 조회 안됨.
+                .fetchOne();
+
+        boolean loaded = emf.getPersistenceUnitUtil().isLoaded(findMember.getTeam());
+        assertThat(loaded).as("페치 조인").isTrue();
+
     }
 }
