@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.persistence.EntityManager;
 import java.util.List;
 
+import static com.study.querydsl.entity.QMember.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
@@ -71,12 +72,19 @@ public class QuerydslBasicTest {
 
     @Test
     public void startQuerydsl() {
-        QMember m = new QMember("m"); // Qmember에 대한 변수명
+        // 1) m이라는 별칭 직접 지정
+        // QMember m = new QMember("m");
+        // 같은 테이블을 조인해야 할 때, 이름이 겹치지 않도록 별칭 사용 > 안그러면 바로 3번처럼 static import 해서 사용하는게 좋음
 
+        // 2) 기본 인스턴스 사용
+        // QMember q = QMember.member;
+
+        // 3) 더 짧게 줄이는법 > QMember.member > static 처리
+        // querydsl은 결과적으로 jpql의 빌더 역할***
         Member findMember = queryFactory
-                .select(m)
-                .from(m)
-                .where(m.username.eq("member1")) // 파라미터 바인딩 처리
+                .select(member)
+                .from(member)
+                .where(member.username.eq("member1")) // 파라미터 바인딩 처리
                 .fetchOne();
 
         Assertions.assertThat(findMember.getUsername()).isEqualTo("member1");

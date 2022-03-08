@@ -12,7 +12,8 @@ spring:
       hibernate:
         show_sql: true
         format_sql: true
-
+        use_sql_comments: true
+        # queryddsl 내용 확인 가능
 logging:
   level:
     org.hibernate.SQL: debug
